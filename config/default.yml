@@ -247,6 +247,27 @@ PreCommit:
     description: 'Check for file execute permissions'
     quiet: true
 
+  Fasterer:
+    enabled: false
+    description: 'Analyzing for potential speed improvements'
+    required_executable: 'fasterer'
+    install_command: 'gem install fasterer'
+    include: '**/*.rb'
+
+  FixMe:
+    enabled: false
+    description: 'Check for "token" strings'
+    required_executable: 'grep'
+    flags: ['-IEHnw']
+    keywords: ['BROKEN', 'BUG', 'ERROR', 'FIXME', 'HACK', 'NOTE', 'OPTIMIZE', 'REVIEW', 'TODO', 'WTF', 'XXX']
+
+  Foodcritic:
+    enabled: false
+    description: 'Analyze with Foodcritic'
+    required_executable: 'foodcritic'
+    flags: ['--epic-fail=any']
+    install_command: 'gem install foodcritic'
+
   ForbiddenBranches:
     enabled: false
     description: 'Check for commit to forbidden branch'
@@ -359,6 +380,11 @@ PreCommit:
     required_library: 'json'
     install_command: 'gem install json'
     include: '**/*.json'
+
+  LicenseHeader:
+    enabled: false
+    license_file: 'LICENSE.txt'
+    description: 'Check source files for license headers'
 
   LocalPathsInGemfile:
     enabled: false
@@ -549,6 +575,14 @@ PreCommit:
     install_command: 'npm install -g standard'
     include: '**/*.js'
 
+  TsLint:
+      enabled: false
+      description: 'Analyze with TSLint'
+      required_executable: 'tslint'
+      install_command: 'npm install -g tslint typescript'
+      flags: ['--t=prose']
+      include: '**/*.ts'
+
   TrailingWhitespace:
     enabled: false
     description: 'Check for trailing whitespace'
@@ -595,6 +629,11 @@ PreCommit:
     include:
       - '**/*.html'
 
+  LineEndings:
+    description: 'Check line endings'
+    enabled: false
+    eol: "\n" # or "\r\n" for Windows-style newlines
+
   XmlLint:
     enabled: false
     description: 'Analyze with xmllint'
@@ -612,6 +651,16 @@ PreCommit:
       - '**/*.xml'
       - '**/*.svg'
 
+  YamlLint:
+    enabled: false
+    description: 'Analyze with YAMLlint'
+    required_executable: 'yamllint'
+    flags: ['--format=parsable']
+    install_command: 'pip install yamllint'
+    include:
+      - '**/*.yaml'
+      - '**/*.yml'
+
   YamlSyntax:
     enabled: false
     description: 'Check YAML syntax'
@@ -625,6 +674,7 @@ PostCheckout:
   ALL:
     required: false
     quiet: false
+    skip_file_checkout: true
 
   BowerInstall:
     enabled: false
@@ -854,6 +904,13 @@ PrePush:
     enabled: false
     description: 'Run Test::Unit test suite'
     command: ['ruby', '-Ilib:test', '-rtest/unit', "-e 'exit! Test::Unit::AutoRunner.run'"]
+
+  Brakeman:
+    enabled: false
+    description: 'Check for security vulnerabilities'
+    required_executable: 'brakeman'
+    flags: ['--exit-on-warn', '--quiet', '--summary']
+    install_command: 'gem install brakeman'
 
 # Hooks that run during `git rebase`, before any commits are rebased.
 # If a hook fails, the rebase is aborted.

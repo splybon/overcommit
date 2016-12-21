@@ -1,5 +1,38 @@
 # Overcommit Changelog
 
+## master
+
+### New Features
+
+* Add `skip_file_checkout` hook setting for `PostCheckout` hooks
+
+## 0.37.0
+
+### New Features
+
+* Add `FixMe` pre-commit hook, to ensure that no "token" words slips through.
+  These strings are things you should fix now, not later
+* Add [`YAMLLint`](https://github.com/adrienverge/yamllint) pre-commit hook
+* Add `LicenseHeader` pre-commit enforcement to ensure open source projects
+  contain proper license comments
+* Add [`Foodcritic`](http://www.foodcritic.io/) pre-commit hook
+* Add `LineEndings` pre-commit hook that allows you to enforcing UNIX- or
+  Windows-style line endings
+
+### Bug Fixes
+
+* Fix `CapitalizedSubject` to not fail when commit message starts with one or
+  more empty lines
+
+## 0.36.0
+
+* Add [`Fasterer`](https://github.com/DamirSvrtan/fasterer) pre-commit hook
+* Add [`Brakeman`](http://brakemanscanner.org/) pre-push hook
+* Add [`TSLint`](http://palantir.github.io/tslint/) pre-commit hook
+* Validate that hook `env` environment configurations have valid names/values
+* Fix a false negative reported by RailsSchemaUpToDate for newly-created Rails
+  projects that don't yet have any migrations
+
 ## 0.35.0
 
 * Drop support for Ruby 1.9.3

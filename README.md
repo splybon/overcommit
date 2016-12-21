@@ -1,7 +1,7 @@
 [![Gem Version](https://badge.fury.io/rb/overcommit.svg)](https://badge.fury.io/rb/overcommit)
 [![Build Status](https://travis-ci.org/brigade/overcommit.svg?branch=master)](https://travis-ci.org/brigade/overcommit)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/iqsr6jtrq6y0jhqq/branch/master?svg=true)](https://ci.appveyor.com/project/brigade/overcommit/branch/master)
-[![Coverage Status](https://coveralls.io/repos/brigade/overcommit/badge.svg)](https://coveralls.io/r/brigade/overcommit)
+[![Coverage Status](https://coveralls.io/repos/github/brigade/overcommit/badge.svg?branch=master)](https://coveralls.io/github/brigade/overcommit?branch=master)
 [![Code Climate](https://codeclimate.com/github/brigade/overcommit.svg)](https://codeclimate.com/github/brigade/overcommit)
 [![Dependency Status](https://gemnasium.com/brigade/overcommit.svg)](https://gemnasium.com/brigade/overcommit)
 [![Inline docs](http://inch-ci.org/github/brigade/overcommit.svg?branch=master)](http://inch-ci.org/github/brigade/overcommit)
@@ -81,24 +81,35 @@ available during your hook runs.
 
 ## Installation
 
-`overcommit` is installed via [RubyGems](https://rubygems.org/):
+`overcommit` is installed via [RubyGems](https://rubygems.org/). It is strongly
+recommended that your environment support running `gem install` without
+requiring `sudo` privileges. Using a Ruby version manager like
+[`rbenv`](https://github.com/rbenv/rbenv/) or [`rvm`](https://rvm.io/) can help
+here.
+
+Once you have an environment that allows you to install gems without `sudo`,
+run:
 
 ```bash
 gem install overcommit
 ```
 
-You can then run the `overcommit` command to install hooks into repositories:
+You can then run the `overcommit` command to install hooks into repositories.
 
 ```bash
 mkdir important-project
 cd important-project
 git init
 overcommit --install
+overcommit --sign    # See Security section below for explanation
 ```
 
-Any existing hooks for your repository which Overcommit would have replaced
-will be backed up. You can restore everything to the way it was by running
-`overcommit --uninstall`.
+See the [Security](#security) section of the documentation to understand why
+`overcommit --sign` is necessary after installing hooks for the first time.
+
+After running `overcommit --install`, any existing hooks for your repository
+which Overcommit will replace will be backed up. You can restore everything to
+the way it was by running `overcommit --uninstall`.
 
 ### Automatically Install Overcommit Hooks
 
@@ -220,10 +231,11 @@ Option                                  | Description
 `required_library`/`required_libraries` | List of Ruby libraries to load with `Kernel.require` before the hook runs. This is specifically for hooks that integrate with external Ruby libraries.
 `command`                               | Array of arguments to use as the command. How each hook uses this is different, but it allows hooks to change the context with which they run. For example, you can change the command to be `['bundle', 'exec', 'rubocop']` instead of just `rubocop` so that you can use the gem versions specified in your local `Gemfile.lock`. This defaults to the name of the `required_executable`.
 `flags`                                 | Array of arguments to append to the `command`. This is useful for customizing the behavior of a tool. It's also useful when a newer version of a tool removes/renames existing flags, so you can update the flags via your `.overcommit.yml` instead of waiting for an upstream fix in Overcommit.
-`env`                                   | Hash of environment variables the hook should be run with. This is intended to be used as a last resort when an executable a hook runs is configured only via an environment variable. Any pre-existing environment variables with the same names as ones defined in `env` will have their original values restored after the hook runs. **WARNING**: If you set the same environment variable for multiple hooks and you've enabled parallel hook runs, since the environment is shared across all threads you could accidentally have these separate hooks trample on each other. In this case, you should disable parallelization for the hook using the `parallelize` option.
+`env`                                   | Hash of environment variables the hook should be run with. This is intended to be used as a last resort when an executable a hook runs is configured only via an environment variable. Any pre-existing environment variables with the same names as ones defined in `env` will have their original values restored after the hook runs. **NOTE:** Currently, only strings are accepted values. Boolean values will raise an error. **WARNING**: If you set the same environment variable for multiple hooks and you've enabled parallel hook runs, since the environment is shared across all threads you could accidentally have these separate hooks trample on each other. In this case, you should disable parallelization for the hook using the `parallelize` option.
 `parallelize`                           | Whether to allow this hook to be run concurrently with other hooks. Disable this if the hook requires access to a shared resource that other hooks may also access and modify (e.g. files, the git index, process environment variables, etc).
 `processors`                            | The number of processing units to reserve for this hook. This does not reserve CPUs, but indicates that out of the total number of possible concurrent hooks allowed by the global `concurrency` option, this hook requires the specified number. Thus in the typical case where `concurrency` is set to the number of available cores (default), and you have a hook that executes an application which itself creates 2 threads (or is otherwise scheduled on 2 cores), you can indicate that Overcommit should allocate 2 `processors` to the hook. Ideally this means your hooks won't put undue load on your available cores.
 `install_command`                       | Command the user can run to install the `required_executable` (or alternately the specified `required_libraries`). This is intended for documentation purposes, as Overcommit does not install software on your behalf since there are too many edge cases where such behavior would result in incorrectly configured installations (e.g. installing a Python package in the global package space instead of in a virtual environment).
+`skip_file_checkout`                    | Whether to skip this hook for file checkouts (e.g. `git checkout some-ref -- file`). Only applicable to `PostCheckout` hooks.
 
 In addition to the built-in configuration options, each hook can expose its
 own unique configuration options. The `AuthorEmail` hook, for example, allows
@@ -379,6 +391,7 @@ a task ID is included for tracking purposes, or ensuring your commit messages
 follow [proper formatting guidelines](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html).
 
 * [`*`CapitalizedSubject](lib/overcommit/hook/commit_msg/capitalized_subject.rb)
+* [Commitplease](lib/overcommit/hook/commit_msg/commitplease.rb)
 * [`*`EmptyMessage](lib/overcommit/hook/commit_msg/empty_message.rb)
 * [GerritChangeId](lib/overcommit/hook/commit_msg/gerrit_change_id.rb)
 * [HardTabs](lib/overcommit/hook/commit_msg/hard_tabs.rb)
@@ -470,12 +483,14 @@ issue](https://github.com/brigade/overcommit/issues/238) for more details.
 * [`*`CaseConflicts](lib/overcommit/hook/pre_commit/case_conflicts.rb)
 * [ChamberSecurity](lib/overcommit/hook/pre_commit/chamber_security.rb)
 * [CoffeeLint](lib/overcommit/hook/pre_commit/coffee_lint.rb)
-* [Commitplease](lib/overcommit/hook/pre_commit/commitplease.rb)
 * [Credo](lib/overcommit/hook/pre_commit/credo.rb)
 * [CssLint](lib/overcommit/hook/pre_commit/css_lint.rb)
 * [Dogma](lib/overcommit/hook/pre_commit/dogma.rb)
 * [EsLint](lib/overcommit/hook/pre_commit/es_lint.rb)
 * [ExecutePermissions](lib/overcommit/hook/pre_commit/execute_permissions.rb)
+* [Fasterer](lib/overcommit/hook/pre_commit/fasterer.rb)
+* [FixMe](lib/overcommit/hook/pre_commit/fix_me.rb)
+* [Foodcritic](lib/overcommit/hook/pre_commit/foodcritic.rb)
 * [ForbiddenBranches](lib/overcommit/hook/pre_commit/forbidden_branches.rb)
 * [GoLint](lib/overcommit/hook/pre_commit/go_lint.rb)
 * [GoVet](lib/overcommit/hook/pre_commit/go_vet.rb)
@@ -491,6 +506,8 @@ issue](https://github.com/brigade/overcommit/issues/238) for more details.
 * [JsLint](lib/overcommit/hook/pre_commit/js_lint.rb)
 * [Jsl](lib/overcommit/hook/pre_commit/jsl.rb)
 * [JsonSyntax](lib/overcommit/hook/pre_commit/json_syntax.rb)
+* [LicenseHeader](lib/overcommit/hook/pre_commit/license_header.rb)
+* [LineEndings](lib/overcommit/hook/pre_commit/line_endings.rb)
 * [LocalPathsInGemfile](lib/overcommit/hook/pre_commit/local_paths_in_gemfile.rb)
 * [Mdl](lib/overcommit/hook/pre_commit/mdl.rb)
 * [`*`MergeConflicts](lib/overcommit/hook/pre_commit/merge_conflicts.rb)
@@ -516,11 +533,13 @@ issue](https://github.com/brigade/overcommit/issues/238) for more details.
 * [Standard](lib/overcommit/hook/pre_commit/standard.rb)
 * [TrailingWhitespace](lib/overcommit/hook/pre_commit/trailing_whitespace.rb)
 * [TravisLint](lib/overcommit/hook/pre_commit/travis_lint.rb)
+* [TsLint](lib/overcommit/hook/pre_commit/ts_lint.rb)
 * [Vint](lib/overcommit/hook/pre_commit/vint.rb)
 * [W3cCss](lib/overcommit/hook/pre_commit/w3c_css.rb)
 * [W3cHtml](lib/overcommit/hook/pre_commit/w3c_html.rb)
 * [XmlLint](lib/overcommit/hook/pre_commit/xml_lint.rb)
 * [XmlSyntax](lib/overcommit/hook/pre_commit/xml_syntax.rb)
+* [YamlLint](lib/overcommit/hook/pre_commit/yaml_lint.rb)
 * [YamlSyntax](lib/overcommit/hook/pre_commit/yaml_syntax.rb)
 
 ### PrePush
@@ -529,6 +548,7 @@ issue](https://github.com/brigade/overcommit/issues/238) for more details.
 but before any objects have been transferred. If a hook fails, the push is
 aborted.
 
+* [Brakeman](lib/overcommit/hook/pre_push/brakeman.rb)
 * [Minitest](lib/overcommit/hook/pre_push/minitest.rb)
 * [ProtectedBranches](lib/overcommit/hook/pre_push/protected_branches.rb)
 * [RSpec](lib/overcommit/hook/pre_push/r_spec.rb)
